@@ -197,32 +197,31 @@ class SDDH(nn.Module):
         for ib in range(b):
             xi, kptsi = x[ib], keypoints[ib]
             kptsi_wh = (kptsi / 2 + 0.5) * wh
-            N_kpts = len(kptsi)
 
             if self.kernel_size>1:
                 patch = self.get_patches_func(xi, kptsi_wh.long(), self.kernel_size)  # [N_kpts, C, K, K]
             else:
                 kptsi_wh_long = kptsi_wh.long()
-                patch = xi[:, kptsi_wh_long[:, 1], kptsi_wh_long[:, 0]].permute(1,0).reshape(N_kpts,c,1,1)
+                patch = xi[:, kptsi_wh_long[:, 1], kptsi_wh_long[:, 0]].permute(1,0).reshape(-1,c,1,1)
                 
             offset = self.offset_conv(patch).clamp(-max_offset, max_offset)  # [N_kpts, 2*n_pos, 1, 1]
             if self.mask:
-                offset = offset[:, :, 0, 0].view(N_kpts, 3, self.n_pos).permute(0, 2, 1)  # [N_kpts, n_pos, 3]
+                offset = offset[:, :, 0, 0].view(-1, 3, self.n_pos).permute(0, 2, 1)  # [N_kpts, n_pos, 3]
                 offset = offset[:,:,:-1]  # [N_kpts, n_pos, 2]
                 mask_weight = torch.sigmoid(offset[:,:,-1]) # [N_kpts, n_pos]
             else:
-                offset = offset[:, :, 0, 0].view(N_kpts, 2, self.n_pos).permute(0, 2, 1)  # [N_kpts, n_pos, 2]
+                offset = offset[:, :, 0, 0].view(-1, 2, self.n_pos).permute(0, 2, 1)  # [N_kpts, n_pos, 2]
             offsets.append(offset)  # for visualization
 
             # get sample positions
             pos = kptsi_wh.unsqueeze(1) + offset  # [N_kpts, n_pos, 2]
             pos = 2.0 * pos / wh[None] - 1
-            pos = pos.reshape(1, N_kpts * self.n_pos, 1, 2)
+            pos = pos.reshape(1, -1, 1, 2)
 
             # sample features
             features = F.grid_sample(xi.unsqueeze(0), pos, mode='bilinear',
                                      align_corners=True)  # [1,C,(N_kpts*n_pos),1]
-            features = features.reshape(c, N_kpts, self.n_pos, 1).permute(1, 0, 2, 3)  # [N_kpts, C, n_pos, 1]
+            features = features.reshape(c, -1, self.n_pos, 1).permute(1, 0, 2, 3)  # [N_kpts, C, n_pos, 1]
             if self.mask:
                 features = torch.einsum('ncpo,np->ncpo', features, mask_weight)
 
@@ -231,7 +230,7 @@ class SDDH(nn.Module):
             if not self.conv2D:
                 descs = torch.einsum('ncp,pcd->nd', features, self.agg_weights)  # [N_kpts, C]
             else:
-                features = features.reshape(N_kpts, -1)[:,:,None,None]  # [N_kpts, C*n_pos, 1, 1]
+                features = features.reshape(-1, c * self.n_pos)[:,:,None,None]  # [N_kpts, C*n_pos, 1, 1]
                 descs = self.convM(features).squeeze() # [N_kpts, C]           
 
             # normalize
