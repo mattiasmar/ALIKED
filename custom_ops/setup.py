@@ -7,7 +7,8 @@ if torch.cuda.is_available():
     extension = CUDAExtension('get_patches',
                               ['get_patches.cpp', 'get_patches_cuda.cu'])
 else:
-    extension = CppExtension('get_patches', ['get_patches.cpp'])
+    extension = CppExtension('get_patches',
+                             ['get_patches.cpp', 'get_patches_stab.cpp'])
 setup(name='custom_ops',
       ext_modules=[extension],
       cmdclass={'build_ext': BuildExtension})
