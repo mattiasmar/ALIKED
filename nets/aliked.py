@@ -149,13 +149,13 @@ class ALIKED(nn.Module):
         if torch.cuda.is_available():
             torch.cuda.synchronize()
 
-        return {'keypoints': keypoints,  # B N 2
-            'descriptors': descriptors,  # B N D
-            'scores': kptscores,  # B N
-            'score_dispersity': scoredispersitys,
-            'score_map': score_map,  # Bx1xHxW
-        }
-    
+        return {'keypoints': torch.stack(keypoints, 0),  # B N 2
+                'descriptors': torch.stack(descriptors, 0),  # B N D
+                'scores': torch.stack(kptscores, 0),  # B N
+                'score_dispersity': torch.stack(scoredispersitys, 0),
+                'score_map': score_map,  # Bx1xHxW
+                }
+
     def run(self, img_rgb):
         img_tensor = ToTensor()(img_rgb)
         img_tensor = img_tensor.to(self.device).unsqueeze_(0)
