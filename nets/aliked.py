@@ -141,20 +141,19 @@ class ALIKED(nn.Module):
         return feature_map, score_map
 
     def forward(self, image):
-        torch.cuda.synchronize()
-        t0 = time.time() 
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
         feature_map, score_map = self.extract_dense_map(image)
         keypoints, kptscores, scoredispersitys = self.dkd(score_map)
         descriptors, offsets = self.desc_head(feature_map, keypoints)
-        torch.cuda.synchronize()
-        t1 = time.time()        
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
 
         return {'keypoints': keypoints,  # B N 2
             'descriptors': descriptors,  # B N D
             'scores': kptscores,  # B N
             'score_dispersity': scoredispersitys,
             'score_map': score_map,  # Bx1xHxW
-            'time': t1-t0,
         }
     
     def run(self, img_rgb):
