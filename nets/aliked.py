@@ -171,6 +171,5 @@ class ALIKED(nn.Module):
         return {'keypoints': kpts.cpu().numpy(),  # N 2
             'descriptors': pred['descriptors'][0].cpu().numpy(),  # N D
             'scores': pred['scores'][0].cpu().numpy(),  # B N D
-            'score_map': pred['score_map'][0,0].cpu().numpy(),  # Bx1xHxW
-            'time': pred['time'],
+            'score_map': pred['score_map'][0,0].cpu().numpy()  # Bx1xHxW
         }
